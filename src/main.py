@@ -11,6 +11,7 @@ from app.ui.login_window import LoginWindow
 from app.ui.main_window import MainWindow
 from app.ui.styles.glassmorphism import get_stylesheet
 from app.core.config import config
+from app.core.database import db
 
 
 class Application:
@@ -21,12 +22,26 @@ class Application:
         self.app.setApplicationName("Analysis Dashboard")
         self.app.setOrganizationName("Zagros Pro")
         
+        # Initialize database
+        self.init_database()
+        
         # Set application style
         self.setup_fonts()
         self.apply_theme()
         
         self.main_window = None
         self.login_window = None
+    
+    def init_database(self):
+        """Initialize database"""
+        try:
+            # Create tables
+            db.create_tables()
+            # Initialize with default data (admin user)
+            db.init_default_data()
+            print("Database initialized successfully")
+        except Exception as e:
+            print(f"Error initializing database: {e}")
     
     def setup_fonts(self):
         """Setup application fonts"""
