@@ -1,6 +1,6 @@
 """
 Unit tests for the updated login window
-Tests RTL layout, OTP input, and logo handling
+Tests RTL layout and logo handling
 """
 import sys
 from pathlib import Path
@@ -56,65 +56,6 @@ class TestLoginWindowRTL:
         assert alignment & Qt.AlignmentFlag.AlignRight
 
 
-class TestLoginWindowOTP:
-    """Test 6-box OTP input implementation"""
-    
-    def test_otp_fields_exist(self):
-        """Test that OTP fields are created"""
-        window = LoginWindow()
-        assert hasattr(window, 'otp_fields')
-        assert len(window.otp_fields) == 6
-    
-    def test_otp_fields_max_length(self):
-        """Test that each OTP field accepts only 1 character"""
-        window = LoginWindow()
-        for field in window.otp_fields:
-            assert field.maxLength() == 1
-    
-    def test_otp_fields_size(self):
-        """Test that each OTP field has correct size"""
-        window = LoginWindow()
-        for field in window.otp_fields:
-            size = field.size()
-            assert size.width() == 45
-            assert size.height() == 50
-    
-    def test_otp_fields_center_alignment(self):
-        """Test that OTP fields have center alignment"""
-        window = LoginWindow()
-        for field in window.otp_fields:
-            alignment = field.alignment()
-            assert alignment & Qt.AlignmentFlag.AlignCenter
-    
-    def test_otp_container_initially_hidden(self):
-        """Test that OTP container is hidden initially"""
-        window = LoginWindow()
-        assert window.twofa_container.isHidden()
-    
-    def test_get_otp_code_method_exists(self):
-        """Test that get_otp_code method exists"""
-        window = LoginWindow()
-        assert hasattr(window, 'get_otp_code')
-        assert callable(window.get_otp_code)
-    
-    def test_get_otp_code_returns_string(self):
-        """Test that get_otp_code returns a string"""
-        window = LoginWindow()
-        # Fill OTP fields with test data
-        for i, field in enumerate(window.otp_fields):
-            field.setText(str(i))
-        
-        code = window.get_otp_code()
-        assert isinstance(code, str)
-        assert code == "012345"
-    
-    def test_on_otp_text_changed_method_exists(self):
-        """Test that on_otp_text_changed method exists"""
-        window = LoginWindow()
-        assert hasattr(window, 'on_otp_text_changed')
-        assert callable(window.on_otp_text_changed)
-
-
 class TestLoginWindowLogo:
     """Test logo handling"""
     
@@ -165,27 +106,24 @@ class TestLoginWindowFunctionality:
             window.handle_login()
             mock_warning.assert_called_once()
     
-    def test_login_shows_2fa_after_valid_credentials(self):
-        """Test that 2FA appears after valid credentials"""
+    def test_login_successful_with_valid_credentials(self):
+        """Test that login succeeds with valid credentials and emits signal"""
         window = LoginWindow()
         window.username_input.setText("admin")
         window.password_input.setText("admin")
         
-        # Trigger login
-        window.handle_login()
+        # Mock the signal
+        signal_emitted = []
+        window.login_successful.connect(lambda data: signal_emitted.append(data))
         
-        # Check that 2FA container is now visible
-        assert window.twofa_container.isVisible()
-
-
-class TestLoginWindowEventFilter:
-    """Test event filter for OTP navigation"""
-    
-    def test_event_filter_method_exists(self):
-        """Test that eventFilter method exists"""
-        window = LoginWindow()
-        assert hasattr(window, 'eventFilter')
-        assert callable(window.eventFilter)
+        # Trigger login
+        with patch.object(window, 'close'):
+            window.handle_login()
+        
+        # Check that signal was emitted with correct data
+        assert len(signal_emitted) == 1
+        assert signal_emitted[0]['username'] == 'admin'
+        assert signal_emitted[0]['role'] == 'super_admin'
 
 
 if __name__ == "__main__":

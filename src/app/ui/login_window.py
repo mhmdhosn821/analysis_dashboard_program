@@ -5,8 +5,8 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QLabel, QLineEdit, 
     QPushButton, QCheckBox, QMessageBox, QFrame
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QEvent
-from PyQt6.QtGui import QPixmap, QFont, QIntValidator
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QPixmap, QFont
 from pathlib import Path
 
 
@@ -124,56 +124,6 @@ class LoginWindow(QWidget):
         
         form_container.addLayout(form_layout)
         
-        # 2FA Code with 6 separate boxes (initially hidden)
-        self.twofa_container = QWidget()
-        twofa_main_layout = QVBoxLayout()
-        twofa_main_layout.setSpacing(10)
-        
-        # Label for 2FA
-        self.twofa_label = QLabel("کد تایید دو مرحله‌ای:")
-        self.twofa_label.setStyleSheet("font-weight: bold; color: white;")
-        self.twofa_label.setAlignment(Qt.AlignmentFlag.AlignRight)
-        twofa_main_layout.addWidget(self.twofa_label)
-        
-        # Create 6 separate boxes for OTP
-        otp_layout = QHBoxLayout()
-        otp_layout.setSpacing(10)
-        otp_layout.setDirection(QHBoxLayout.Direction.RightToLeft)
-        
-        self.otp_fields = []
-        for i in range(6):
-            field = QLineEdit()
-            field.setMaxLength(1)
-            field.setFixedSize(45, 50)
-            field.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            # Use validator to accept only digits
-            field.setValidator(QIntValidator(0, 9))
-            field.setStyleSheet("""
-                QLineEdit {
-                    background: rgba(255, 255, 255, 0.1);
-                    border: 2px solid rgba(255, 255, 255, 0.2);
-                    border-radius: 10px;
-                    color: white;
-                    font-size: 20px;
-                    font-weight: bold;
-                }
-                QLineEdit:focus {
-                    border-color: #F7941D;
-                    background: rgba(255, 255, 255, 0.15);
-                }
-            """)
-            # Connect signals for auto-navigation
-            field.textChanged.connect(lambda text, idx=i: self.on_otp_text_changed(text, idx))
-            field.installEventFilter(self)
-            self.otp_fields.append(field)
-            otp_layout.addWidget(field)
-        
-        twofa_main_layout.addLayout(otp_layout)
-        self.twofa_container.setLayout(twofa_main_layout)
-        self.twofa_container.hide()
-        
-        form_container.addWidget(self.twofa_container)
-        
         # Remember me checkbox
         self.remember_checkbox = QCheckBox("مرا به خاطر بسپار")
         self.remember_checkbox.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
@@ -201,47 +151,6 @@ class LoginWindow(QWidget):
         
         self.setLayout(main_layout)
     
-    def eventFilter(self, obj, event):
-        """Handle key events for OTP fields"""
-        if obj in self.otp_fields and event.type() == QEvent.Type.KeyPress:
-            idx = self.otp_fields.index(obj)
-            
-            # Handle backspace
-            if event.key() == Qt.Key.Key_Backspace:
-                if not obj.text() and idx > 0:
-                    # Move to previous field if current is empty
-                    self.otp_fields[idx - 1].setFocus()
-                    self.otp_fields[idx - 1].setText("")
-                    return True
-            
-            # Handle left arrow (in RTL, left goes to next)
-            elif event.key() == Qt.Key.Key_Left:
-                if idx < 5:
-                    self.otp_fields[idx + 1].setFocus()
-                return True
-            
-            # Handle right arrow (in RTL, right goes to previous)
-            elif event.key() == Qt.Key.Key_Right:
-                if idx > 0:
-                    self.otp_fields[idx - 1].setFocus()
-                return True
-        
-        return super().eventFilter(obj, event)
-    
-    def on_otp_text_changed(self, text, idx):
-        """Handle OTP field text change for auto-navigation"""
-        if text and idx < 5:
-            # Move to next field when digit is entered
-            self.otp_fields[idx + 1].setFocus()
-        
-        # If all fields are filled, trigger login
-        if all(field.text() for field in self.otp_fields):
-            self.handle_login()
-    
-    def get_otp_code(self):
-        """Get the complete OTP code from all fields"""
-        return ''.join(field.text() for field in self.otp_fields)
-    
     def handle_login(self):
         """Handle login button click"""
         username = self.username_input.text().strip()
@@ -254,18 +163,6 @@ class LoginWindow(QWidget):
         # TODO: Implement actual authentication
         # For now, simulate successful login
         if username == "admin" and password == "admin":
-            # Check if 2FA is required
-            if not self.twofa_container.isVisible():
-                # Show 2FA input
-                self.twofa_container.show()
-                self.otp_fields[0].setFocus()
-                return
-            else:
-                twofa_code = self.get_otp_code()
-                if len(twofa_code) != 6:
-                    QMessageBox.warning(self, "خطا", "لطفا کد تایید 6 رقمی را کامل وارد کنید")
-                    return
-            
             # Successful login
             user_data = {
                 'username': username,
