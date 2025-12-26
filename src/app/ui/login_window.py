@@ -5,8 +5,8 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QLabel, QLineEdit, 
     QPushButton, QCheckBox, QMessageBox, QFrame
 )
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QPixmap, QFont, QIntValidator
+from PyQt6.QtCore import Qt, pyqtSignal, QEvent
+from PyQt6.QtGui import QPixmap, QFont, QIntValidator, QKeyEvent
 from pathlib import Path
 
 
@@ -20,6 +20,20 @@ class LoginWindow(QWidget):
         self.setWindowTitle("Analysis Dashboard - Login")
         self.setFixedSize(450, 600)
         self.setup_ui()
+    
+    def _create_fallback_logo(self, logo_label):
+        """Create fallback text logo when image is not available"""
+        logo_label.setStyleSheet("""
+            QLabel {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                            stop:0 #F7941D, stop:1 #FF9933);
+                border-radius: 60px;
+                color: white;
+                font-size: 48px;
+                font-weight: bold;
+            }
+        """)
+        logo_label.setText("ZP")
     
     def setup_ui(self):
         """Setup the user interface"""
@@ -49,30 +63,10 @@ class LoginWindow(QWidget):
                 logo_label.setPixmap(pixmap.scaled(120, 120, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
             else:
                 # Fallback to text if image fails to load
-                logo_label.setStyleSheet("""
-                    QLabel {
-                        background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                                                    stop:0 #F7941D, stop:1 #FF9933);
-                        border-radius: 60px;
-                        color: white;
-                        font-size: 48px;
-                        font-weight: bold;
-                    }
-                """)
-                logo_label.setText("ZP")
+                self._create_fallback_logo(logo_label)
         else:
             # Fallback to text if file doesn't exist
-            logo_label.setStyleSheet("""
-                QLabel {
-                    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                                                stop:0 #F7941D, stop:1 #FF9933);
-                    border-radius: 60px;
-                    color: white;
-                    font-size: 48px;
-                    font-weight: bold;
-                }
-            """)
-            logo_label.setText("ZP")
+            self._create_fallback_logo(logo_label)
         
         logo_layout.addWidget(logo_label)
         
@@ -210,15 +204,11 @@ class LoginWindow(QWidget):
     
     def eventFilter(self, obj, event):
         """Handle key events for OTP fields"""
-        from PyQt6.QtCore import QEvent
-        from PyQt6.QtGui import QKeyEvent
-        
         if obj in self.otp_fields and event.type() == QEvent.Type.KeyPress:
-            key_event = event
             idx = self.otp_fields.index(obj)
             
             # Handle backspace
-            if key_event.key() == Qt.Key.Key_Backspace:
+            if event.key() == Qt.Key.Key_Backspace:
                 if not obj.text() and idx > 0:
                     # Move to previous field if current is empty
                     self.otp_fields[idx - 1].setFocus()
@@ -226,13 +216,13 @@ class LoginWindow(QWidget):
                     return True
             
             # Handle left arrow (in RTL, left goes to next)
-            elif key_event.key() == Qt.Key.Key_Left:
+            elif event.key() == Qt.Key.Key_Left:
                 if idx < 5:
                     self.otp_fields[idx + 1].setFocus()
                 return True
             
             # Handle right arrow (in RTL, right goes to previous)
-            elif key_event.key() == Qt.Key.Key_Right:
+            elif event.key() == Qt.Key.Key_Right:
                 if idx > 0:
                     self.otp_fields[idx - 1].setFocus()
                 return True
