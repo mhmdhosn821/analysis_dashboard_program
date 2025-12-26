@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QCheckBox, QMessageBox, QFrame
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QEvent
-from PyQt6.QtGui import QPixmap, QFont, QIntValidator, QKeyEvent
+from PyQt6.QtGui import QPixmap, QFont, QIntValidator
 from pathlib import Path
 
 
@@ -131,7 +131,7 @@ class LoginWindow(QWidget):
         twofa_main_layout.setSpacing(10)
         
         # Label for 2FA
-        self.twofa_label = QLabel("کد تأیید دو مرحله‌ای:")
+        self.twofa_label = QLabel("کد تایید دو مرحله‌ای:")
         self.twofa_label.setStyleSheet("font-weight: bold; color: white;")
         self.twofa_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         twofa_main_layout.addWidget(self.twofa_label)
