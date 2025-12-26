@@ -62,6 +62,12 @@ def format_percentage(value: float, decimals: int = 1) -> str:
     return f"{value:.{decimals}f}%"
 
 
+# Time conversion constants
+SECONDS_PER_MINUTE = 60
+SECONDS_PER_HOUR = 3600
+SECONDS_PER_DAY = 86400
+
+
 def format_duration(seconds: int) -> str:
     """
     Format duration in human-readable format
@@ -72,16 +78,16 @@ def format_duration(seconds: int) -> str:
     Returns:
         Formatted duration string
     """
-    if seconds < 60:
+    if seconds < SECONDS_PER_MINUTE:
         return f"{seconds} ثانیه"
-    elif seconds < 3600:
-        minutes = seconds // 60
+    elif seconds < SECONDS_PER_HOUR:
+        minutes = seconds // SECONDS_PER_MINUTE
         return f"{minutes} دقیقه"
-    elif seconds < 86400:
-        hours = seconds // 3600
+    elif seconds < SECONDS_PER_DAY:
+        hours = seconds // SECONDS_PER_HOUR
         return f"{hours} ساعت"
     else:
-        days = seconds // 86400
+        days = seconds // SECONDS_PER_DAY
         return f"{days} روز"
 
 

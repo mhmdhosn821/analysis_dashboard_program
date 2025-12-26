@@ -283,7 +283,7 @@ class DatabaseManager:
         """Get all active alerts"""
         session = self.db.get_session()
         try:
-            stmt = select(Alert).where(Alert.is_active == True)
+            stmt = select(Alert).where(Alert.is_active.is_(True))
             return list(session.execute(stmt).scalars().all())
         finally:
             session.close()
