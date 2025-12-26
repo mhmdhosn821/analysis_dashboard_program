@@ -4,10 +4,14 @@ Main Window
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTabWidget,
     QLabel, QPushButton, QMenuBar, QMenu, QStatusBar, QToolBar,
-    QMessageBox
+    QMessageBox, QDialog
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QAction, QIcon
+from app.ui.dashboard.performance import PerformanceDashboard
+from app.ui.dashboard.sales import SalesDashboard
+from app.ui.settings.settings_panel import SettingsPanel
+from app.ui.widgets.dialogs import AlertDialog, AIChatDialog
 
 
 class MainWindow(QMainWindow):
@@ -183,44 +187,33 @@ class MainWindow(QMainWindow):
     def add_dashboard_tabs(self):
         """Add dashboard tabs"""
         # Performance Overview
-        performance_widget = QWidget()
-        performance_layout = QVBoxLayout()
-        performance_layout.addWidget(QLabel("بررسی عملکرد"))
-        performance_layout.addStretch()
-        performance_widget.setLayout(performance_layout)
-        self.tab_widget.addTab(performance_widget, "بررسی عملکرد")
+        self.performance_dashboard = PerformanceDashboard()
+        self.tab_widget.addTab(self.performance_dashboard, "📊 بررسی عملکرد")
         
-        # User Behavior
+        # User Behavior (placeholder)
         behavior_widget = QWidget()
         behavior_layout = QVBoxLayout()
-        behavior_layout.addWidget(QLabel("رفتار کاربران"))
+        behavior_layout.addWidget(QLabel("رفتار کاربران - در حال توسعه"))
         behavior_layout.addStretch()
         behavior_widget.setLayout(behavior_layout)
-        self.tab_widget.addTab(behavior_widget, "رفتار کاربران")
+        self.tab_widget.addTab(behavior_widget, "👤 رفتار کاربران")
         
         # Product Sales
-        sales_widget = QWidget()
-        sales_layout = QVBoxLayout()
-        sales_layout.addWidget(QLabel("فروش محصولات"))
-        sales_layout.addStretch()
-        sales_widget.setLayout(sales_layout)
-        self.tab_widget.addTab(sales_widget, "فروش محصولات")
+        self.sales_dashboard = SalesDashboard()
+        self.tab_widget.addTab(self.sales_dashboard, "💰 فروش محصولات")
         
-        # Campaign Metrics
+        # Campaign Metrics (placeholder)
         campaign_widget = QWidget()
         campaign_layout = QVBoxLayout()
-        campaign_layout.addWidget(QLabel("معیارهای کمپین"))
+        campaign_layout.addWidget(QLabel("معیارهای کمپین - در حال توسعه"))
         campaign_layout.addStretch()
         campaign_widget.setLayout(campaign_layout)
-        self.tab_widget.addTab(campaign_widget, "معیارهای کمپین")
+        self.tab_widget.addTab(campaign_widget, "📢 معیارهای کمپین")
         
-        # Tech Performance
-        tech_widget = QWidget()
-        tech_layout = QVBoxLayout()
-        tech_layout.addWidget(QLabel("عملکرد فنی"))
-        tech_layout.addStretch()
-        tech_widget.setLayout(tech_layout)
-        self.tab_widget.addTab(tech_widget, "عملکرد فنی")
+        # Settings
+        self.settings_panel = SettingsPanel()
+        self.settings_panel.settings_changed.connect(self.on_settings_changed)
+        self.tab_widget.addTab(self.settings_panel, "⚙️ تنظیمات")
     
     def auto_refresh(self):
         """Auto-refresh data"""
@@ -266,15 +259,44 @@ class MainWindow(QMainWindow):
     
     def create_alert(self):
         """Create alert"""
-        QMessageBox.information(self, "هشدار", "ایجاد هشدار جدید")
+        from app.core.db_manager import db_manager
+        dialog = AlertDialog()
+        
+        def on_alert_saved(alert_data):
+            try:
+                # Save alert to database
+                db_manager.create_alert(
+                    name=alert_data['name'],
+                    metric=alert_data['metric'],
+                    condition=alert_data['condition'],
+                    threshold=alert_data['threshold'],
+                    channels=alert_data['channels']
+                )
+                QMessageBox.information(self, "موفقیت", "هشدار با موفقیت ایجاد شد.")
+            except Exception as e:
+                QMessageBox.critical(self, "خطا", f"خطا در ایجاد هشدار:\n{str(e)}")
+        
+        dialog.alert_saved.connect(on_alert_saved)
+        dialog.exec()
     
     def view_alerts(self):
         """View alerts"""
-        QMessageBox.information(self, "هشدارها", "مشاهده همه هشدارها")
+        from app.core.db_manager import db_manager
+        alerts = db_manager.get_active_alerts()
+        
+        msg = "هشدارهای فعال:\n\n"
+        if not alerts:
+            msg += "هیچ هشداری یافت نشد."
+        else:
+            for alert in alerts:
+                msg += f"- {alert.name}: {alert.metric} {alert.condition} {alert.threshold}\n"
+        
+        QMessageBox.information(self, "هشدارها", msg)
     
     def open_general_settings(self):
         """Open general settings"""
-        QMessageBox.information(self, "تنظیمات", "تنظیمات عمومی")
+        # Switch to settings tab
+        self.tab_widget.setCurrentWidget(self.settings_panel)
     
     def open_user_management(self):
         """Open user management"""
@@ -283,6 +305,10 @@ class MainWindow(QMainWindow):
     def show_dashboard(self):
         """Show dashboard"""
         self.tab_widget.setCurrentIndex(0)
+    
+    def on_settings_changed(self):
+        """Handle settings change"""
+        self.statusBar().showMessage("تنظیمات با موفقیت ذخیره شد", 3000)
     
     def show_about(self):
         """Show about dialog"""

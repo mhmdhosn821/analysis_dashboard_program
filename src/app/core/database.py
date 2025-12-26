@@ -169,11 +169,89 @@ class CachedData(Base):
     expires_at = Column(DateTime, nullable=False)
 
 
+class AnalyticsData(Base):
+    """Analytics data model"""
+    __tablename__ = 'analytics_data'
+    
+    id = Column(Integer, primary_key=True)
+    property_id = Column(String(100), nullable=False)
+    date = Column(DateTime, nullable=False)
+    metric_name = Column(String(100), nullable=False)
+    metric_value = Column(Float, nullable=False)
+    dimensions = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Sale(Base):
+    """Sales data model"""
+    __tablename__ = 'sales'
+    
+    id = Column(Integer, primary_key=True)
+    order_id = Column(String(100), unique=True, nullable=False)
+    product_id = Column(Integer, ForeignKey('products.id'), nullable=True)
+    customer_name = Column(String(200), nullable=True)
+    amount = Column(Float, nullable=False)
+    quantity = Column(Integer, default=1)
+    status = Column(String(50), default='pending')  # pending, completed, cancelled
+    sale_date = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    product = relationship("Product", back_populates="sales")
+
+
+class Product(Base):
+    """Product model"""
+    __tablename__ = 'products'
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(200), nullable=False)
+    sku = Column(String(100), unique=True, nullable=True)
+    category = Column(String(100), nullable=True)
+    price = Column(Float, nullable=False)
+    stock = Column(Integer, default=0)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    sales = relationship("Sale", back_populates="product", cascade="all, delete-orphan")
+
+
+class Setting(Base):
+    """Settings model"""
+    __tablename__ = 'settings'
+    
+    id = Column(Integer, primary_key=True)
+    key = Column(String(100), unique=True, nullable=False)
+    value = Column(Text, nullable=True)
+    category = Column(String(50), nullable=False)  # api_keys, thresholds, display, etc.
+    is_encrypted = Column(Boolean, default=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class Database:
     """Database connection manager"""
     
-    def __init__(self, database_url: str):
-        self.engine = create_engine(database_url, pool_pre_ping=True)
+    def __init__(self, database_url: str = None):
+        """Initialize database connection
+        
+        Args:
+            database_url: Database URL. If None, uses SQLite with default path
+        """
+        if database_url is None:
+            # Use SQLite with default path in user's home directory
+            from pathlib import Path
+            db_dir = Path.home() / ".analysis_dashboard"
+            db_dir.mkdir(parents=True, exist_ok=True)
+            database_url = f"sqlite:///{db_dir}/dashboard.db"
+        
+        # SQLite specific settings
+        connect_args = {}
+        if database_url.startswith('sqlite'):
+            connect_args = {'check_same_thread': False}
+        
+        self.engine = create_engine(database_url, connect_args=connect_args, pool_pre_ping=True)
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
     
     def create_tables(self):
@@ -187,3 +265,35 @@ class Database:
     def get_session(self):
         """Get database session"""
         return self.SessionLocal()
+    
+    def init_default_data(self):
+        """Initialize database with default data"""
+        from app.core.security import PasswordHasher
+        session = self.get_session()
+        try:
+            # Check if admin user exists
+            from sqlalchemy import select
+            stmt = select(User).where(User.username == 'admin')
+            admin = session.execute(stmt).scalar_one_or_none()
+            
+            if not admin:
+                # Create default admin user
+                admin = User(
+                    username='admin',
+                    email='admin@example.com',
+                    password_hash=PasswordHasher.hash_password('admin'),
+                    role=UserRole.SUPER_ADMIN,
+                    is_active=True,
+                    require_2fa=False
+                )
+                session.add(admin)
+                session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+
+# Global database instance
+db = Database()
