@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 import random
 from app.core.database import db
 from app.core.db_manager import db_manager
-from app.core.security import hash_password
+from app.core.security import PasswordHasher
 
 
 def init_database():

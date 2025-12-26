@@ -4,10 +4,21 @@ Notification Service for alerts
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from telegram import Bot
-from slack_sdk.webhook import WebhookClient
 from typing import List, Dict, Any, Optional
 import asyncio
+
+# Optional imports for telegram and slack
+try:
+    from telegram import Bot
+    TELEGRAM_AVAILABLE = True
+except ImportError:
+    TELEGRAM_AVAILABLE = False
+
+try:
+    from slack_sdk.webhook import WebhookClient
+    SLACK_AVAILABLE = True
+except ImportError:
+    SLACK_AVAILABLE = False
 
 
 class EmailNotification:
@@ -58,11 +69,18 @@ class TelegramNotification:
     """Telegram notification sender"""
     
     def __init__(self, bot_token: str, chat_id: str):
+        if not TELEGRAM_AVAILABLE:
+            print("Warning: Telegram module not available")
+            self.bot = None
+            self.chat_id = None
+            return
         self.bot = Bot(token=bot_token)
         self.chat_id = chat_id
     
     async def send_async(self, message: str) -> bool:
         """Send Telegram message asynchronously"""
+        if not TELEGRAM_AVAILABLE or not self.bot:
+            return False
         try:
             await self.bot.send_message(chat_id=self.chat_id, text=message, parse_mode='HTML')
             return True
@@ -80,6 +98,8 @@ class TelegramNotification:
         Returns:
             True if sent successfully
         """
+        if not TELEGRAM_AVAILABLE or not self.bot:
+            return False
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
@@ -95,6 +115,10 @@ class SlackNotification:
     """Slack notification sender"""
     
     def __init__(self, webhook_url: str):
+        if not SLACK_AVAILABLE:
+            print("Warning: Slack SDK not available")
+            self.webhook = None
+            return
         self.webhook = WebhookClient(webhook_url)
     
     def send(self, message: str, blocks: Optional[List[Dict]] = None) -> bool:
@@ -108,6 +132,8 @@ class SlackNotification:
         Returns:
             True if sent successfully
         """
+        if not SLACK_AVAILABLE or not self.webhook:
+            return False
         try:
             if blocks:
                 response = self.webhook.send(text=message, blocks=blocks)
@@ -123,36 +149,50 @@ class SlackNotification:
 class NotificationService:
     """Unified notification service"""
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config):
         """
         Initialize notification service
         
         Args:
-            config: Notification configuration
+            config: Notification configuration (NotificationConfig or dict)
         """
         self.email = None
         self.telegram = None
         self.slack = None
         
+        # Handle both pydantic model and dict
+        if hasattr(config, 'email_enabled'):
+            # Pydantic model
+            email_enabled = config.email_enabled
+            telegram_enabled = config.telegram_enabled
+            slack_enabled = config.slack_enabled
+        else:
+            # Dictionary
+            email_enabled = config.get('email_enabled', False)
+            telegram_enabled = config.get('telegram_enabled', False)
+            slack_enabled = config.get('slack_enabled', False)
+        
         # Initialize email if configured
-        if config.get('email_enabled'):
-            self.email = EmailNotification(
-                config['email_smtp_host'],
-                config['email_smtp_port'],
-                config['email_username'],
-                config['email_password']
-            )
+        if email_enabled:
+            smtp_host = config.email_smtp_host if hasattr(config, 'email_smtp_host') else config['email_smtp_host']
+            smtp_port = config.email_smtp_port if hasattr(config, 'email_smtp_port') else config['email_smtp_port']
+            username = config.email_username if hasattr(config, 'email_username') else config['email_username']
+            password = config.email_password if hasattr(config, 'email_password') else config['email_password']
+            
+            self.email = EmailNotification(smtp_host, smtp_port, username, password)
         
         # Initialize Telegram if configured
-        if config.get('telegram_enabled'):
-            self.telegram = TelegramNotification(
-                config['telegram_bot_token'],
-                config['telegram_chat_id']
-            )
+        if telegram_enabled:
+            bot_token = config.telegram_bot_token if hasattr(config, 'telegram_bot_token') else config['telegram_bot_token']
+            chat_id = config.telegram_chat_id if hasattr(config, 'telegram_chat_id') else config['telegram_chat_id']
+            
+            self.telegram = TelegramNotification(bot_token, chat_id)
         
         # Initialize Slack if configured
-        if config.get('slack_enabled'):
-            self.slack = SlackNotification(config['slack_webhook_url'])
+        if slack_enabled:
+            webhook_url = config.slack_webhook_url if hasattr(config, 'slack_webhook_url') else config['slack_webhook_url']
+            
+            self.slack = SlackNotification(webhook_url)
     
     def send_alert(self, alert_type: str, message: str, channels: List[str], 
                    details: Optional[Dict] = None) -> Dict[str, bool]:

@@ -11,7 +11,8 @@ class AlertMonitor:
     """Monitor metrics and trigger alerts"""
     
     def __init__(self):
-        self.notification_service = NotificationService()
+        from app.core.config import config
+        self.notification_service = NotificationService(config.notification)
         self.last_check = {}
     
     def check_traffic_drop(self, current_traffic: int, previous_traffic: int,

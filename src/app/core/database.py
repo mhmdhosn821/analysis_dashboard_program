@@ -268,7 +268,7 @@ class Database:
     
     def init_default_data(self):
         """Initialize database with default data"""
-        from app.core.security import hash_password
+        from app.core.security import PasswordHasher
         session = self.get_session()
         try:
             # Check if admin user exists
@@ -281,7 +281,7 @@ class Database:
                 admin = User(
                     username='admin',
                     email='admin@example.com',
-                    password_hash=hash_password('admin'),
+                    password_hash=PasswordHasher.hash_password('admin'),
                     role=UserRole.SUPER_ADMIN,
                     is_active=True,
                     require_2fa=False
