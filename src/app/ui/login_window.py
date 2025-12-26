@@ -152,7 +152,13 @@ class LoginWindow(QWidget):
         self.setLayout(main_layout)
     
     def handle_login(self):
-        """Handle login button click"""
+        """Handle login button click
+        
+        Note: 2FA verification has been removed from the UI. 
+        If backend authentication requires 2FA, it should be handled 
+        server-side or the backend configuration should be updated 
+        to disable 2FA requirements.
+        """
         username = self.username_input.text().strip()
         password = self.password_input.text().strip()
         

@@ -1,6 +1,6 @@
 """
 Unit tests for the updated login window
-Tests RTL layout and logo handling
+Tests RTL layout, logo handling, and simplified login functionality
 """
 import sys
 from pathlib import Path
