@@ -97,7 +97,6 @@ class LoginWindow(QWidget):
         
         # Create form layout with RTL support
         form_layout = QFormLayout()
-        form_layout.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         form_layout.setFormAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         form_layout.setHorizontalSpacing(15)
